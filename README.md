@@ -1,14 +1,16 @@
 # Furby 2012: ESP32 brain transplant
 
 This replaces the 2012 Hasbro Furby's original controller (Jetta board
-`RUCT-101A` / `39834+003+01`) with an ESP32. The new brain keeps the body,
+`RUCT-101A` / `39834+003+01`) with an ESP32-S3 (default) or an original
+ESP32. The new brain keeps the body,
 the single cam motor, the touch/tilt switches, the speaker and the mic.
 It gives the Furby a personality you can reprogram, plus a serial console
 for tuning.
 
 - **[docs/WIRING.md](docs/WIRING.md):** parts list, pin map, power, how to
   identify each Furby wire, and the bring-up order.
-- **[firmware/](firmware/):** PlatformIO project (Arduino framework, ESP32).
+- **[firmware/](firmware/):** PlatformIO project (Arduino framework).
+  Build environments: `esp32s3` (default) and `esp32dev` (original ESP32).
 
 ## How the Furby moves
 
@@ -69,7 +71,8 @@ All sounds are synthesized, so no audio files are needed. Drop WAV files into
 ```
 pip install platformio
 cd firmware
-pio run -t upload          # build and flash
+pio run -t upload          # build and flash (ESP32-S3)
+pio run -e esp32dev -t upload   # ...or for an original ESP32
 pio run -t uploadfs        # optional: upload data/ (WAV files)
 pio device monitor         # console at 115200, type `help`
 pio test -e native         # unit tests on your computer
@@ -90,8 +93,9 @@ auto on|off | sleep | wake | status
 ## Status
 
 - The hardware-independent logic passes its unit tests on a computer.
-- The ESP32 sources pass a syntax/type check against stub headers that copy
-  the Arduino-ESP32 2.0.17 / ESP-IDF 4.4 API signatures. A full `pio run`
+- The ESP32 sources pass a syntax/type check, for both the S3 and the
+  original ESP32 pin maps, against stub headers that copy the Arduino-ESP32
+  2.0.17 / ESP-IDF 4.4 API signatures. A full `pio run`
   cross-build hasn't been done yet (the toolchain couldn't be downloaded in
   the environment this was written in).
 - **Not yet run on real hardware.** Wire roles and pose positions must be

@@ -53,7 +53,7 @@ void stopAll() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(PIN_STATUS_LED, OUTPUT);
+  if (PIN_STATUS_LED >= 0) pinMode(PIN_STATUS_LED, OUTPUT);
 
   audio::begin();
   int32_t cpr;
@@ -91,7 +91,14 @@ void loop() {
   if (req.move) body.moveTo(req.pose);
   if (req.play) audio::play(req.sound);
 
-  digitalWrite(PIN_STATUS_LED, brain.state() == furby::Brain::State::kAwake);
+  // Write only on change: on S3 boards this is an RGB LED (a neopixel
+  // transfer per write).
+  static int led = -1;
+  int awake = brain.state() == furby::Brain::State::kAwake;
+  if (PIN_STATUS_LED >= 0 && awake != led) {
+    led = awake;
+    digitalWrite(PIN_STATUS_LED, awake);
+  }
   consoleUpdate();
   delay(1);
 }

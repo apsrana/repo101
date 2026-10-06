@@ -12,7 +12,7 @@ connectors, so you can unplug it, bag it, and restore the toy later.
 
 | Part | Why | Notes |
 |---|---|---|
-| ESP32 dev board (WROOM-32, e.g. DevKitC or a mini "D1 R32"-style board) | New brain | The pin map assumes a WROOM-32. A smaller board fits inside the shell more easily. |
+| ESP32-S3 dev board (e.g. ESP32-S3-DevKitC-1), **or** an original ESP32 WROOM-32 board | New brain | Both are supported, each with its own pin map. The S3 is the default build. Needs 8 MB+ flash for the default S3 build. A smaller board fits inside the shell more easily. |
 | DRV8833 motor driver module | Drives the single cam motor | Runs from the 6 V battery directly. Handles 1.5 A per channel. |
 | MAX98357A I2S amplifier breakout | Drives the original speaker | Takes 3.3–5 V. Leave the GAIN pin unconnected for 9 dB. |
 | MAX9814 microphone amp module | Hearing (claps, voices) | Has its own mic. You can swap in the Furby's capsule. |
@@ -33,39 +33,52 @@ connectors, so you can unplug it, bag it, and restore the toy later.
  All grounds joined: battery −, DRV8833 GND, regulator GND, ESP32 GND, modules, Furby common.
 ```
 
-## ESP32 pin map
+## Pin map
 
-Every pin is set in [`firmware/include/config.h`](../firmware/include/config.h).
+Every pin is set in [`firmware/include/config.h`](../firmware/include/config.h),
+which picks the right column automatically for the chip you build for.
 Change it there if your layout differs.
 
-| ESP32 GPIO | Connects to | Furby side |
-|---|---|---|
-| 25 | DRV8833 AIN1 | |
-| 26 | DRV8833 AIN2 | |
-| 27 | DRV8833 nSLEEP (or tie it to 3V3) | |
-| — | DRV8833 AOUT1 / AOUT2 | Motor, red 2-pin plug on the motor board |
-| 32 | Encoder channel A | Gearbox optical encoder, signal 1 |
-| 33 | Encoder channel B | Gearbox optical encoder, signal 2 |
-| 14 | Home switch (other leg to GND) | Cam "home" contact switch |
-| 13 | Head switch (other leg to GND) | Ribbon cable `SW-*` line |
-| 4 | Back switch | Ribbon cable |
-| 16 | Tummy switch | Ribbon cable |
-| 17 | Tongue switch | Ribbon cable |
-| 23 | Tail switch | `tail` / `SW-TACT` lead |
-| 18 | Tilt (ball) switch | Ribbon cable or sensor board |
-| 36 (VP) | MAX9814 OUT | Mic (module mic, or the Furby capsule moved onto the module) |
-| 39 (VN) | Light sensor divider midpoint | Forehead light sensor |
-| 19 | MAX98357A BCLK | |
-| 21 | MAX98357A LRC | |
-| 22 | MAX98357A DIN | |
-| — | MAX98357A + / − | Speaker (2 wires, about 8 Ω) |
-| 2 | On-board LED | Lit while the Furby is awake |
+| ESP32-S3 GPIO | Original ESP32 GPIO | Connects to | Furby side |
+|---|---|---|---|
+| 15 | 25 | DRV8833 AIN1 | |
+| 16 | 26 | DRV8833 AIN2 | |
+| 17 | 27 | DRV8833 nSLEEP (or tie it to 3V3) | |
+| — | — | DRV8833 AOUT1 / AOUT2 | Motor, red 2-pin plug on the motor board |
+| 4 | 32 | Encoder channel A | Gearbox optical encoder, signal 1 |
+| 5 | 33 | Encoder channel B | Gearbox optical encoder, signal 2 |
+| 6 | 14 | Home switch (other leg to GND) | Cam "home" contact switch |
+| 7 | 13 | Head switch (other leg to GND) | Ribbon cable `SW-*` line |
+| 8 | 4 | Back switch | Ribbon cable |
+| 9 | 16 | Tummy switch | Ribbon cable |
+| 10 | 17 | Tongue switch | Ribbon cable |
+| 11 | 23 | Tail switch | `tail` / `SW-TACT` lead |
+| 12 | 18 | Tilt (ball) switch | Ribbon cable or sensor board |
+| 1 | 36 (VP) | MAX9814 OUT | Mic (module mic, or the Furby capsule moved onto the module) |
+| 2 | 39 (VN) | Light sensor divider midpoint | Forehead light sensor |
+| 39 | 19 | MAX98357A BCLK | |
+| 40 | 21 | MAX98357A LRC | |
+| 41 | 22 | MAX98357A DIN | |
+| — | — | MAX98357A + / − | Speaker (2 wires, about 8 Ω) |
+| built-in RGB LED | 2 (built-in LED) | Status | Lit while the Furby is awake |
+
+### ESP32-S3 notes
+- The S3 map uses only pins that are free on every S3 module, including
+  ones with octal PSRAM (N8R8, N16R8).
+- **Don't use these S3 pins:** 0, 3, 45, 46 (boot strapping), 19/20
+  (USB), 26–37 (flash/PSRAM), 43/44 (serial), 38/48 (RGB LED).
+- The mic and light sensor must be on GPIO 1–10 (ADC1).
+- Free for later (e.g. round LCD eyes): 13, 14, 18, 21, 42, 47.
+- The console runs on the **native USB port** (labelled "USB" on
+  DevKitC-1). Flash and monitor through that port.
+- Flash with `pio run -t upload`. The S3 is the default build.
 
 All switch inputs use the ESP32's internal pull-ups and read as **active when
 shorted to GND**. If a Furby switch is wired to a supply line instead of a
 shared ground, re-wire it as switch-to-GND.
 
-Avoid GPIO 0, 5, 12 and 15 for anything new. They are boot-strapping pins.
+On an original ESP32, avoid GPIO 0, 5, 12 and 15 for anything new. They
+are boot-strapping pins.
 
 ## Power
 
@@ -103,13 +116,13 @@ motor board, in which case you tap its signals there.
    emitters to GND. Pull each up to 3V3 with 10 kΩ, or rely on the internal
    pull-up. Turn the gears slowly by hand: each signal should toggle between
    about 0 V and 3.3 V, offset from the other by a quarter step.
-3. Connect them to GPIO 32/33. With `probe` on, turning the gears should
+3. Connect them to the encoder pins (S3: GPIO 4/5, ESP32: GPIO 32/33). With `probe` on, turning the gears should
    change `encoder=`. Direction doesn't matter yet.
 
 ### Home switch
 - A two-wire contact that closes (or opens) **once per full cam turn**.
   Check for continuity changes while turning the gears by hand.
-- Wire it between GPIO 14 and GND. If it reads ACTIVE except near home,
+- Wire it between the home pin (S3: GPIO 6, ESP32: GPIO 14) and GND. If it reads ACTIVE except near home,
   set `HOME_ACTIVE_LOW = false`.
 
 ### Touch, tongue and tilt switches (grey ribbon, `SW-1`…`SW-11`)
@@ -125,8 +138,8 @@ motor board, in which case you tap its signals there.
   is ground. The simplest option is to use the MAX9814 module's own mic and
   mount it behind the Furby's mic hole.
 - **Light sensor** (forehead): measure resistance while shading it. An LDR
-  swings from kΩ to MΩ. Wire it as a divider: 3V3 to sensor to GPIO 39, and
-  GPIO 39 through 10 kΩ to GND. Then tune `LIGHT_DARK_THRESHOLD` using the
+  swings from kΩ to MΩ. Wire it as a divider: 3V3 to sensor to the light
+  pin (S3: GPIO 2, ESP32: GPIO 39), and the same pin through 10 kΩ to GND. Then tune `LIGHT_DARK_THRESHOLD` using the
   `probe` readout. Set `PIN_LIGHT = -1` to skip it.
 
 ### The LCD eyes
