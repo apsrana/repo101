@@ -91,6 +91,27 @@ are boot-strapping pins.
 - **Untethered:** close the jumper and unplug USB.
 - Put the 470 µF capacitor right at the DRV8833 VM/GND pins.
 
+## Powering everything from USB or a USB-C power bank
+
+The motor can also run from USB 5 V instead of the batteries:
+
+- DRV8833 **VM** to the board's **VIN** pin (USB 5 V; check with a meter
+  that VIN reads about 5 V with USB plugged in), DRV8833 GND to GND.
+- Put the **470 µF capacitor** across VM/GND at the driver (mind the
+  polarity). Up to 1000 µF helps more.
+- The motor is built for 6 V, so on 5 V it runs a little slower and
+  weaker. The firmware allows full duty (`MOTOR_PWM_MAX = 255`) and
+  soft-starts the motor over `MOTOR_RAMP_MS` (80 ms) to limit the start-up
+  current spike.
+- If the motor's current dips the supply, the ESP32 resets. `status` (and
+  the boot message) then reports `last reset: BROWNOUT`. Fixes: a bigger
+  capacitor, a longer `MOTOR_RAMP_MS`, a stronger supply.
+- Supplies: a computer USB port gives 0.5–0.9 A. A USB-C charger or power
+  bank gives 5 V at up to 3 A without any PD negotiation. Many power banks
+  switch off when the current is low (an idle ESP32 draws well under
+  100 mA). Use one with an always-on / low-current mode.
+- A cheap inline USB-C power meter shows the motor's real current draw.
+
 ## Identifying the Furby's wires
 
 Unplug each harness from the original board and work through them one at a

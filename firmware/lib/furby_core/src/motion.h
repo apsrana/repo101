@@ -35,6 +35,20 @@ inline int32_t homeCorrection(int32_t count, int32_t countsPerRev, int32_t windo
   return 0;
 }
 
+// Soft-start for the motor output. `out` and `target` are signed duties
+// (+forward / -reverse). Speeding up is limited to `maxStep` per call so
+// the motor's start-up current doesn't brown out a weak (USB) supply;
+// slowing down and stopping are immediate, and a direction change drops
+// to 0 first and then ramps up the other way.
+inline int16_t slewDuty(int16_t out, int16_t target, int16_t maxStep) {
+  if ((out > 0 && target < 0) || (out < 0 && target > 0)) out = 0;
+  int16_t aOut = out < 0 ? -out : out;
+  int16_t aTarget = target < 0 ? -target : target;
+  if (aTarget <= aOut) return target;
+  int16_t next = aOut + maxStep < aTarget ? aOut + maxStep : aTarget;
+  return target < 0 ? -next : next;
+}
+
 struct MotorCmd {
   int8_t dir = 0;   // +1 forward, -1 reverse, 0 brake
   uint8_t pwm = 0;

@@ -28,6 +28,7 @@ class Body {
   int32_t count() const { return count_; }
   int32_t position() const { return furby::wrap(count_, cpr_); }
   int32_t countsPerRev() const { return cpr_; }
+  int dutyPercent() const { return out_ * 100 / 255; }  // signed, after soft-start
   bool encoderInvert() const { return invert_; }
   bool homeActive() const { return homeActive_; }
   furby::MotionController::Status lastMoveStatus() const { return motion_.status(); }
@@ -37,6 +38,7 @@ class Body {
 
  private:
   void apply(int8_t dir, uint8_t pwm);
+  void stepOutput(uint32_t now);
   void readEncoder();
   void onHomeEnter(int8_t dir);
   void setCountsPerRev(int32_t cpr);
@@ -45,6 +47,9 @@ class Body {
   furby::PoseTable poses_;
   Mode mode_ = Mode::kIdle;
   int8_t dir_ = 0;
+  int16_t target_ = 0;  // commanded signed duty
+  int16_t out_ = 0;     // signed duty actually applied (soft-started)
+  uint32_t lastStepAt_ = 0;
   int32_t cpr_ = 1200;
   bool invert_ = false;
   bool homed_ = false;

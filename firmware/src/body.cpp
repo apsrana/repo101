@@ -88,16 +88,25 @@ void Body::setCountsPerRev(int32_t cpr) {
 
 void Body::apply(int8_t dir, uint8_t pwm) {
   dir_ = dir;
-  if (dir > 0) {
-    ledcWrite(kPwmChIn1, pwm);
-    ledcWrite(kPwmChIn2, 0);
-  } else if (dir < 0) {
-    ledcWrite(kPwmChIn1, 0);
-    ledcWrite(kPwmChIn2, pwm);
-  } else {
+  target_ = dir * static_cast<int16_t>(pwm);
+  stepOutput(millis());
+}
+
+void Body::stepOutput(uint32_t now) {
+  uint32_t elapsed = now - lastStepAt_;
+  lastStepAt_ = now;
+  int32_t step = 255L * elapsed / (MOTOR_RAMP_MS ? MOTOR_RAMP_MS : 1);
+  out_ = furby::slewDuty(out_, target_, step > 255 ? 255 : step);
+  if (dir_ == 0) {
     // Both inputs high = DRV8833 brake (motor terminals shorted).
     ledcWrite(kPwmChIn1, 255);
     ledcWrite(kPwmChIn2, 255);
+  } else if (out_ >= 0) {
+    ledcWrite(kPwmChIn1, out_);
+    ledcWrite(kPwmChIn2, 0);
+  } else {
+    ledcWrite(kPwmChIn1, 0);
+    ledcWrite(kPwmChIn2, -out_);
   }
 }
 
@@ -191,6 +200,7 @@ void Body::onHomeEnter(int8_t dir) {
 void Body::update() {
   const uint32_t now = millis();
   readEncoder();
+  stepOutput(now);
 
   bool raw = readHomeRaw();
   if (raw != homeRawLast_) {

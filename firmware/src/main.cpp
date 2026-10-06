@@ -4,6 +4,7 @@
 // its poses and sounds -> Body drives the cam, audio plays the sounds.
 
 #include <Arduino.h>
+#include <esp_system.h>
 
 #include "app.h"
 #include "audio.h"
@@ -40,6 +41,21 @@ void onSensor(furby::Sensor s) {
 }
 }  // namespace
 
+const char* resetReason() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "power on";
+    case ESP_RST_SW: return "software restart";
+    case ESP_RST_PANIC: return "crash (panic)";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_BROWNOUT: return "BROWNOUT (supply voltage dipped - motor drew too much?)";
+    case ESP_RST_EXT: return "reset button / external";
+    case ESP_RST_DEEPSLEEP: return "deep sleep wake";
+    default: return "other";
+  }
+}
+
 void playAnimation(const furby::Animation* a) {
   Serial.printf("[anim] %s\n", a->name);
   sequencer.start(a);
@@ -68,6 +84,7 @@ void setup() {
   brain.begin(cfg, millis(), esp_random());
 
   consoleBegin();
+  Serial.printf("last reset: %s\n", resetReason());
   body.startHoming();
 }
 

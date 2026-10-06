@@ -11,6 +11,8 @@ extern furby::Sequencer sequencer;
 extern bool autonomous;  // false = brain paused, console drives everything
 
 void playAnimation(const furby::Animation* a);
+// Why the chip last reset, e.g. "brownout (supply voltage dipped)".
+const char* resetReason();
 void stopAll();
 
 // settings.cpp: calibration, poses and volume persisted in NVS.

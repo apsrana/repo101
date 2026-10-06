@@ -44,6 +44,16 @@ void test_home_correction() {
   TEST_ASSERT_EQUAL(3, homeCorrection(-1203, 1200, 150));
 }
 
+void test_slew_duty() {
+  TEST_ASSERT_EQUAL(10, slewDuty(0, 200, 10));     // ramps up
+  TEST_ASSERT_EQUAL(200, slewDuty(195, 200, 10));  // reaches target
+  TEST_ASSERT_EQUAL(50, slewDuty(200, 50, 10));    // slows down at once
+  TEST_ASSERT_EQUAL(0, slewDuty(200, 0, 10));      // stops at once
+  TEST_ASSERT_EQUAL(-10, slewDuty(200, -200, 10)); // reverse: via 0, then ramp
+  TEST_ASSERT_EQUAL(-30, slewDuty(-20, -255, 10));
+  TEST_ASSERT_EQUAL(0, slewDuty(0, 200, 0));       // no time passed: no change
+}
+
 MotionConfig cfg(bool reverse) {
   MotionConfig c;
   c.countsPerRev = 1000;
@@ -322,6 +332,7 @@ int main() {
   RUN_TEST(test_wrap);
   RUN_TEST(test_pcnt_delta);
   RUN_TEST(test_home_correction);
+  RUN_TEST(test_slew_duty);
   RUN_TEST(test_motion_shortest_path);
   RUN_TEST(test_motion_ramp_and_done);
   RUN_TEST(test_motion_forward_only_overshoot_accepted);

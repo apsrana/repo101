@@ -62,6 +62,8 @@ void status() {
                 sequencer.busy() ? sequencer.current()->name : "-",
                 audio::busy() ? "playing" : "idle", audio::volume(), inputs::micLevel(),
                 inputs::lightLevel());
+  Serial.printf("last reset: %s  motor duty=%d%%\n", resetReason(),
+                body.dutyPercent());
 }
 
 void listPoses() {

@@ -64,9 +64,13 @@ constexpr int PIN_STATUS_LED = -1;
 // IN1/IN2 are PWM; nSLEEP HIGH = enabled.
 constexpr uint32_t MOTOR_PWM_FREQ = 20000;  // above hearing range
 constexpr uint8_t  MOTOR_PWM_BITS = 8;
-constexpr uint8_t  MOTOR_PWM_MAX  = 230;    // cap duty: ~5.4 V average from 6 V
+// Sized for a 5 V (USB) motor supply. On 4xAA (6 V) lower MAX to ~230.
+constexpr uint8_t  MOTOR_PWM_MAX  = 255;
 constexpr uint8_t  MOTOR_PWM_MIN  = 110;    // below this the gearbox stalls
 constexpr uint8_t  MOTOR_PWM_JOG  = 160;
+// Soft-start: time to ramp from stopped to full power. Longer = gentler
+// on a USB supply (fewer brownout resets), slower to get moving.
+constexpr uint32_t MOTOR_RAMP_MS  = 80;
 
 // ---- Gearbox position sensing ------------------------------------------
 // Two-channel optical quadrature encoder board on the motor hub (wires:
