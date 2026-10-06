@@ -3,8 +3,9 @@
 The original board stays intact. Every Furby part plugs into it through
 connectors, so you can unplug it, bag it, and restore the toy later.
 
-> **Identify before you connect.** The wire roles below come from photos
-> and published teardowns, not from a schematic. Check every wire with a
+> **Identify before you connect.** Apart from the encoder board, whose
+> wiring is documented (see its section), the wire roles below come from
+> photos and published teardowns, not from a schematic. Check every wire with a
 > multimeter using the steps in [Identifying the Furby's wires](#identifying-the-furbys-wires)
 > before you connect it to the ESP32.
 
@@ -17,7 +18,7 @@ connectors, so you can unplug it, bag it, and restore the toy later.
 | MAX98357A I2S amplifier breakout | Drives the original speaker | Takes 3.3–5 V. Leave the GAIN pin unconnected for 9 dB. |
 | MAX9814 microphone amp module | Hearing (claps, voices) | Has its own mic. You can swap in the Furby's capsule. |
 | 3.3 V buck-boost regulator (e.g. Pololu S7V8F3) | Powers the ESP32 from 4×AA | Keeps working as the batteries drop from 6.4 V to about 3.6 V. |
-| 10 kΩ resistors (×2–4), 220 Ω (×1) | Pull-ups and LED current | See the encoder section. |
+| 10 kΩ resistor (×1–2) | Light sensor divider | The encoder board needs no extra resistors (see the encoder section). |
 | 470 µF / 10 V capacitor | Across the motor supply | Stops motor surges from resetting the ESP32. |
 | 2-pin jumper or switch | Between the regulator and ESP32 3V3 | Open it while on USB (see Power). |
 
@@ -28,7 +29,7 @@ connectors, so you can unplug it, bag it, and restore the toy later.
              │      +470 µF
              └──► 3.3 V buck-boost ──[jumper]──► ESP32 3V3 ──┬─► MAX98357A VIN
                                                              ├─► MAX9814 VDD
-                                                             ├─► encoder LED / pull-ups
+                                                             ├─► encoder board (red wire)
                                                              └─► light sensor divider
  All grounds joined: battery −, DRV8833 GND, regulator GND, ESP32 GND, modules, Furby common.
 ```
@@ -102,26 +103,52 @@ time. Turn on `probe` in the serial console to watch each input live.
 - Connect it to DRV8833 AOUT1/AOUT2. Which way round doesn't matter:
   calibration sorts out the direction.
 
-### Optical encoder (two signals)
-Teardowns describe a 2-channel optical quadrature encoder: an IR LED shining
-through a slotted wheel onto two phototransistors. Find it by following the
-wires from the slotted wheel near the motor. The 4-wire harness (red, black,
-white, yellow) is the likely candidate. It may also sit on the small upright
-motor board, in which case you tap its signals there.
+### Optical encoder board (on the motor hub)
+This is the small round green board mounted beside the motor, with a black
+housing that looks like a tiny camera. A slotted wheel spins through that
+housing, between an IR LED and two photodiodes. The board also carries a
+74HC14/74HCT14 Schmitt-trigger chip that cleans up the signals, plus its
+own LED and pull-up resistors.
 
-1. **LED:** diode-test across pairs. An IR LED reads about 1.0–1.3 V one way
-   and open the other. Feed it from 3V3 through **220 Ω**, unless the
-   board already has a series resistor on that line.
-2. **Signals:** the other wires go to the phototransistor collectors, with
-   emitters to GND. Pull each up to 3V3 with 10 kΩ, or rely on the internal
-   pull-up. Turn the gears slowly by hand: each signal should toggle between
-   about 0 V and 3.3 V, offset from the other by a quarter step.
-3. Connect them to the encoder pins (S3: GPIO 4/5, ESP32: GPIO 32/33). With `probe` on, turning the gears should
-   change `encoder=`. Direction doesn't matter yet.
+Its 4-wire harness, as documented by
+[RoBotz SF](http://robotzsf.blogspot.com/2013/03/furby-2012-motor-quadrature-encoder.html)
+(blog post and schematic by C. Brown, March 2013):
+
+| Encoder wire | Function | Connect to |
+|---|---|---|
+| **Red** | Vcc | **3V3** (see the warning below) |
+| **Blue** | Ground | **GND** |
+| **Black** | Channel 1 | Encoder A (S3: GPIO 4, ESP32: GPIO 32) |
+| **White** | Channel 2 | Encoder B (S3: GPIO 5, ESP32: GPIO 33) |
+
+- **No extra resistors.** The board has its own LED resistor and pull-ups,
+  and the Schmitt-trigger chip actively drives both outputs high and low.
+- **Power it from 3.3 V, not 5 V.** The outputs swing all the way to
+  whatever voltage feeds the red wire, so 5 V there would put 5 V on ESP32
+  pins. The original Furby logic runs at 3.3 V (the boards are marked
+  `VCC33`), so 3.3 V is very likely what it's designed for. The blog used
+  5 V only because its Arduino is a 5 V board.
+- **Read the chip marking** (the 14-pin chip on the back). The blog's text
+  says CD54**HC**14 and its schematic says CD74**HCT**14. An **HC** chip is
+  rated down to 2 V, so 3.3 V is fine. An **HCT** chip is officially a 5 V
+  part. It usually still works at 3.3 V, but if the signals don't toggle
+  cleanly under `probe`, power it from 5 V and put a divider on each signal
+  (10 kΩ in series, 20 kΩ to GND) to bring it down to 3.3 V.
+- Never power the red wire straight from the batteries. Fresh AAs give
+  6.4 V, above the chip's limit.
+- The chip inverts the signals. That's harmless: `cal` works out the
+  counting direction automatically.
+
+**Check:** with the ESP32 running and `probe` on, turn the gears slowly by
+hand. `encoder=` should count up one way and down the other.
 
 ### Home switch
-- A two-wire contact that closes (or opens) **once per full cam turn**.
-  Check for continuity changes while turning the gears by hand.
+- The **blue plastic switch** on top of the motor hub, next to the motor
+  (labelled in the RoBotz SF photo). It's a two-wire contact that changes
+  **once per full cam turn**. Check for continuity changes while turning
+  the gears by hand.
+- Its trigger point is set by a screw on the rear with red glue on it.
+  Leave it alone: the firmware treats wherever it triggers as "home".
 - Wire it between the home pin (S3: GPIO 6, ESP32: GPIO 14) and GND. If it reads ACTIVE except near home,
   set `HOME_ACTIVE_LOW = false`.
 

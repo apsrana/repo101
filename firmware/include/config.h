@@ -69,9 +69,10 @@ constexpr uint8_t  MOTOR_PWM_MIN  = 110;    // below this the gearbox stalls
 constexpr uint8_t  MOTOR_PWM_JOG  = 160;
 
 // ---- Gearbox position sensing ------------------------------------------
-// Two-channel optical quadrature encoder on the motor board plus a cam
-// "home" contact switch. Phototransistor outputs need a pull-up; the
-// internal ~45k is usually enough, add 10k to 3V3 if edges look slow.
+// Two-channel optical quadrature encoder board on the motor hub (wires:
+// red Vcc -> 3V3, blue GND, black channel A, white channel B; its 74HC14
+// drives the outputs, so no pull-ups are needed) plus the cam "home"
+// contact switch.
 constexpr bool HOME_ACTIVE_LOW = true;
 
 // Overwritten by the `cal` console command (stored in flash).
