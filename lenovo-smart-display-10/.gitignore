@@ -1,0 +1,6 @@
+# Partition dumps contain per-device keys, serials and calibration data.
+backups/
+work/
+out/
+*.mbn
+*.elf

@@ -1,0 +1,405 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Lenovo Smart Display 10" (SD-X701B / SD-X501F / SD-X701F, "blueberry").
+ *
+ * DRAFT, minimal bring-up board file. It is derived from
+ * apq8053-lenovo-cd-18781y.dts (ThinkSmart View, Felix Kaechele), which
+ * shares the SoC, PMICs and the HX83100A panel/touch option.
+ *
+ * Enabled: eMMC, USB peripheral, DSI panel + WLED backlight, touch, volume
+ * keys, serial console. Everything else stays disabled until it has been
+ * checked against the stock (downstream) device tree. Every "TODO(verify)"
+ * value is copied from the ThinkSmart View.
+ */
+/dts-v1/;
+
+#include <dt-bindings/arm/qcom,ids.h>
+#include "msm8953.dtsi"
+#include "pm8953.dtsi"
+#include "pmi8950.dtsi"
+
+/delete-node/ &cont_splash_mem;
+/* APQ8053: no modem. Freeing these regions gives back ~116 MB. */
+/delete-node/ &mpss_mem;
+/delete-node/ &wcnss;
+/delete-node/ &wcnss_fw_mem;
+/delete-node/ &mba_mem;
+
+/ {
+	model = "Lenovo Smart Display 10";
+	compatible = "lenovo,blueberry", "qcom,apq8053", "qcom,msm8953";
+	chassis-type = "tablet";
+	qcom,msm-id = <QCOM_ID_APQ8053 0>;
+	/* TODO(verify): from the extracted stock DTB, confirm on device */
+	qcom,board-id = <0x01010020 0>;
+
+	aliases {
+		mmc0 = &sdhc_1;
+		mmc1 = &sdhc_2;
+		serial0 = &uart_0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		volume-up-key {
+			label = "Volume Up";
+			/* TODO(verify) */
+			gpios = <&tlmm 85 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_VOLUMEUP>;
+			/* No power key: let the volume keys wake the device. */
+			wakeup-source;
+		};
+
+		/*
+		 * TODO: the mic-mute switch and camera shutter are on GPIOs 86/87
+		 * on the ThinkSmart View. Add them once confirmed on blueberry.
+		 */
+	};
+
+	reserved-memory {
+		/delete-node/ rmtfs@f2d00000;
+
+		/* TODO(verify): splash address from the downstream DTS */
+		cont_splash_mem: cont-splash@90001000 {
+			reg = <0x0 0x90001000 0x0 (800 * 1280 * 3)>;
+			no-map;
+		};
+	};
+
+	panel_avdd: panel-avdd-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "panel_avdd";
+
+		/* TODO(verify) */
+		gpio = <&tlmm 100 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		vin-supply = <&vph_pwr>;
+	};
+
+	vph_pwr: vph-pwr-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vph_pwr";
+		regulator-always-on;
+		regulator-boot-on;
+	};
+};
+
+&gpu_zap_shader {
+	/* Copy the device-signed a506_zap.* from the stock firmware here. */
+	firmware-name = "qcom/msm8953/lenovo/blueberry/a506_zap.mdt";
+};
+
+&hsusb_phy {
+	vdd-supply = <&pm8953_l3>;
+	vdda-pll-supply = <&pm8953_l7>;
+	vdda-phy-dpdm-supply = <&pm8953_l13>;
+
+	status = "okay";
+};
+
+&i2c_3 {
+	status = "okay";
+
+	/*
+	 * lk2nd sets status = "okay" here when it detects the matching panel
+	 * (touchscreen-compatible in its board file).
+	 * TODO(verify): bus, address, IRQ/reset GPIOs, supplies.
+	 */
+	hx83100a_ts: touchscreen@48 {
+		compatible = "himax,hx83100a";
+		reg = <0x48>;
+
+		interrupts-extended = <&tlmm 65 IRQ_TYPE_EDGE_FALLING>;
+
+		pinctrl-0 = <&touch_default>;
+		pinctrl-names = "default";
+
+		reset-gpios = <&tlmm 64 GPIO_ACTIVE_LOW>;
+
+		avdd-supply = <&pm8953_l5>;
+		vdd-supply = <&pm8953_l10>;
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <1280>;
+
+		status = "disabled";
+	};
+};
+
+&ibb {
+	qcom,discharge-resistor-kohms = <32>;
+};
+
+&lab {
+	qcom,soft-start-us = <800>;
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	vdda-supply = <&pm8953_s3>;
+	vddio-supply = <&pm8953_l6>;
+
+	status = "okay";
+
+	/*
+	 * lk2nd replaces this compatible with the detected panel's
+	 * ("lenovo,cd-18781y-hx83100a" for "hx83100a 800p video mode dsi panel").
+	 */
+	panel: panel@0 {
+		compatible = "lenovo,blueberry-panel";
+		reg = <0>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&pmx_mdss_default &mdss_te_default>;
+		pinctrl-1 = <&pmx_mdss_sleep &mdss_te_default>;
+
+		backlight = <&pmi8950_wled>;
+
+		/* TODO(verify) */
+		reset-gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
+		backlight-gpios = <&tlmm 95 GPIO_ACTIVE_HIGH>;
+
+		avdd-supply = <&panel_avdd>;
+		vsp-supply = <&lab>;
+		vsn-supply = <&ibb>;
+
+		/* Android rotates the portrait panel by 270 degrees. */
+		rotation = <270>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mdss_dsi0_out>;
+			};
+		};
+	};
+};
+
+&mdss_dsi0_out {
+	data-lanes = <0 1 2 3>;
+	remote-endpoint = <&panel_in>;
+};
+
+&mdss_dsi0_phy {
+	vddio-supply = <&pm8953_l6>;
+	vcca-supply = <&pm8953_l3>;
+
+	status = "okay";
+};
+
+&mpss {
+	/delete-node/ mba;
+	/delete-node/ mpss;
+};
+
+&pm8953_pon {
+	/* No power key */
+	pwrkey {
+		status = "disabled";
+	};
+};
+
+&pm8953_resin {
+	linux,code = <KEY_VOLUMEDOWN>;
+	wakeup-source;
+
+	status = "okay";
+};
+
+&pmi8950_fg {
+	/* Mains-powered, no battery */
+	status = "disabled";
+};
+
+&pmi8950_wled {
+	/* TODO(verify) */
+	qcom,current-limit-microamp = <20000>;
+	qcom,external-pfet;
+
+	status = "okay";
+};
+
+/* TODO(verify): regulator ranges copied from the ThinkSmart View. */
+&rpm_requests {
+	regulators {
+		compatible = "qcom,rpm-pm8953-regulators";
+		vdd_s1-supply = <&vph_pwr>;
+		vdd_s2-supply = <&vph_pwr>;
+		vdd_s3-supply = <&vph_pwr>;
+		vdd_s4-supply = <&vph_pwr>;
+		vdd_s5-supply = <&vph_pwr>;
+		vdd_s6-supply = <&vph_pwr>;
+		vdd_s7-supply = <&vph_pwr>;
+		vdd_l1-supply = <&pm8953_s3>;
+		vdd_l2_l3-supply = <&pm8953_s3>;
+		vdd_l4_l5_l6_l7_l16_l19-supply = <&pm8953_s4>;
+		vdd_l8_l11_l12_l13_l14_l15-supply = <&vph_pwr>;
+		vdd_l9_l10_l17_l18_l22-supply = <&vph_pwr>;
+		vdd_l23-supply = <&pm8953_s3>;
+
+		pm8953_s1: s1 {
+			regulator-min-microvolt = <870000>;
+			regulator-max-microvolt = <1156000>;
+		};
+
+		pm8953_s3: s3 {
+			regulator-min-microvolt = <1224000>;
+			regulator-max-microvolt = <1224000>;
+		};
+
+		pm8953_s4: s4 {
+			regulator-min-microvolt = <1900000>;
+			regulator-max-microvolt = <2050000>;
+		};
+
+		pm8953_l1: l1 {
+			regulator-min-microvolt = <1000000>;
+			regulator-max-microvolt = <1100000>;
+		};
+
+		pm8953_l2: l2 {
+			regulator-min-microvolt = <975000>;
+			regulator-max-microvolt = <1225000>;
+			regulator-always-on;
+		};
+
+		pm8953_l3: l3 {
+			regulator-min-microvolt = <925000>;
+			regulator-max-microvolt = <925000>;
+		};
+
+		pm8953_l4: l4 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		pm8953_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8953_l6: l6 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8953_l7: l7 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1900000>;
+		};
+
+		pm8953_l8: l8 {
+			regulator-min-microvolt = <2900000>;
+			regulator-max-microvolt = <2900000>;
+		};
+
+		pm8953_l9: l9 {
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8953_l10: l10 {
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8953_l11: l11 {
+			regulator-min-microvolt = <2950000>;
+			regulator-max-microvolt = <2950000>;
+		};
+
+		pm8953_l12: l12 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <2950000>;
+		};
+
+		pm8953_l13: l13 {
+			regulator-min-microvolt = <3125000>;
+			regulator-max-microvolt = <3125000>;
+		};
+
+		pm8953_l16: l16 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8953_l17: l17 {
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <2850000>;
+		};
+
+		pm8953_l19: l19 {
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1350000>;
+		};
+
+		pm8953_l22: l22 {
+			regulator-always-on;
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2850000>;
+		};
+
+		pm8953_l23: l23 {
+			regulator-min-microvolt = <975000>;
+			regulator-max-microvolt = <1225000>;
+		};
+	};
+};
+
+/* eMMC */
+&sdhc_1 {
+	vmmc-supply = <&pm8953_l8>;
+	vqmmc-supply = <&pm8953_l5>;
+
+	status = "okay";
+};
+
+/*
+ * Wi-Fi (sdhc_2 + ath10k SDIO), Bluetooth (uart_5), audio (sound_card,
+ * lpass, wcd_codec, speaker amp) and sensors are left disabled until
+ * they have been checked against the stock DTB. See docs/PORTING.md §5.
+ */
+
+&tlmm {
+	pmx_mdss_default: pmx-mdss-default-state {
+		pins = "gpio61";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-disable;
+		output-high;
+	};
+
+	pmx_mdss_sleep: pmx-mdss-sleep-state {
+		pins = "gpio61";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+
+	touch_default: touch-default-state {
+		pins = "gpio64", "gpio65";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-up;
+	};
+};
+
+/* TODO(verify): on the ThinkSmart View, uart_0 is routed to the USB-C connector. */
+&uart_0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart_console_active>;
+
+	status = "okay";
+};
+
+&usb3 {
+	status = "okay";
+};

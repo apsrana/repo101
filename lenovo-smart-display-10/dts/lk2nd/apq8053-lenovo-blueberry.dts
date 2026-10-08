@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/dts-v1/;
+
+#include <skeleton64.dtsi>
+#include <lk2nd.dtsi>
+
+/*
+ * Lenovo Smart Display 10" (SD-X701B / SD-X501F / SD-X701F, "blueberry").
+ *
+ * DRAFT, based on apq8053-lenovo-cd-18781y.dts (ThinkSmart View).
+ *
+ * Build without embedded QCDT (as the ThinkSmart View requires):
+ *
+ *   make TOOLCHAIN_PREFIX=arm-none-eabi- LK2ND_QCDTBS="" lk2nd-msm8953
+ *
+ * If the bootloader stays locked and only accepts AVB1 test-key signed
+ * images, add SIGN_BOOTIMG=1 and write lk2nd.img over EDL.
+ *
+ * TODO: confirm the board-id from /proc/device-tree/qcom,board-id on the
+ * running stock firmware. 0x01010020 comes from the extracted stock DTB.
+ */
+
+/ {
+	qcom,msm-id = <QCOM_ID_APQ8053 0>;
+	qcom,board-id = <0x01010020 0>;
+};
+
+&lk2nd {
+	model = "Lenovo Smart Display 10";
+	compatible = "lenovo,blueberry";
+
+	lk2nd,dtb-files = "apq8053-lenovo-blueberry";
+	lk2nd,menu-key-strings = "Volume Down", "Volume Up";
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		/*
+		 * No power key: map Volume Up to KEY_POWER for selecting menu
+		 * entries, as on the ThinkSmart View.
+		 * TODO: confirm GPIO 85 against the downstream gpio_keys node.
+		 */
+		volume-up-unmap {
+			lk2nd,code = <KEY_VOLUMEUP>;
+			gpios = <&pmic_pon 0 0>;
+		};
+
+		volume-up {
+			lk2nd,code = <KEY_POWER>;
+			gpios = <&tlmm 85 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		};
+	};
+
+	panel {
+		compatible = "lenovo,blueberry-panel", "lk2nd,panel";
+
+		/* Stock LK reports "hx83100a 800p video mode dsi panel" */
+		qcom,mdss_dsi_hx83100a_800p_video {
+			compatible = "lenovo,cd-18781y-hx83100a";
+			touchscreen-compatible = "himax,hx83100a";
+		};
+	};
+};

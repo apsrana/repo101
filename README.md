@@ -12,6 +12,10 @@ for tuning.
 - **[firmware/](firmware/):** PlatformIO project (Arduino framework).
   Build environments: `esp32s3` (default) and `esp32dev` (original ESP32).
 
+Separate project in this repository:
+**[lenovo-smart-display-10/](lenovo-smart-display-10/)** has the unlock
+tooling and the postmarketOS port for the Lenovo Smart Display 10 (`blueberry`).
+
 ## How the Furby moves
 
 All of the Furby's motion (eyelids, ears, mouth, leaning) comes from **one
