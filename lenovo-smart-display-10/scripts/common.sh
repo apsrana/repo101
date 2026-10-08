@@ -31,3 +31,18 @@ confirm() {
 	read -r reply
 	[ "$reply" = "yes" ] || die "aborted"
 }
+
+# Debian's packaged mkbootimg can fail with "No module named 'gki'".
+# Use it only if it actually runs; otherwise use AOSP's script.
+mkbootimg_cmd() {
+	if command -v mkbootimg >/dev/null && mkbootimg --help >/dev/null 2>&1; then
+		echo mkbootimg
+		return
+	fi
+	local aosp="$SD10_WORK/tools/mkbootimg"
+	if [ ! -f "$aosp/mkbootimg.py" ]; then
+		git clone -q --depth 1 https://android.googlesource.com/platform/system/tools/mkbootimg "$aosp" >&2 ||
+			die "could not fetch AOSP mkbootimg"
+	fi
+	echo "python3 $aosp/mkbootimg.py"
+}

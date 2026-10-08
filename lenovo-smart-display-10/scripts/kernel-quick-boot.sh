@@ -11,7 +11,7 @@
 # boots far enough to test display/touch over the serial console.
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
-need git make clang ld.lld mkbootimg
+need git make clang ld.lld python3
 
 src="$SD10_WORK/linux"
 dts_dir="$src/arch/arm64/boot/dts/qcom"
@@ -86,7 +86,7 @@ fi
 [ ${#ramdisk_args[@]} -gt 0 ] || warn "no pmbootstrap rootfs found: booting without an initramfs"
 cmdline="$cmdline $extra"
 
-mkbootimg \
+$(mkbootimg_cmd) \
 	--kernel "$out/Image.gz-dtb" "${ramdisk_args[@]}" \
 	--base 0x80000000 --pagesize 2048 \
 	--cmdline "$cmdline" \

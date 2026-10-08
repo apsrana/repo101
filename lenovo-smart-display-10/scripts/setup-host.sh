@@ -47,7 +47,7 @@ pipx ensurepath >/dev/null || true
 pipx install --force "git+https://github.com/bkerler/edl.git"
 pipx install --force pmbootstrap
 # Some distros don't ship mkbootimg/unpack_bootimg; use AOSP's scripts.
-if ! command -v mkbootimg >/dev/null || ! command -v unpack_bootimg >/dev/null; then
+if ! mkbootimg --help >/dev/null 2>&1 || ! command -v unpack_bootimg >/dev/null; then
 	log "Fetching AOSP mkbootimg/unpack_bootimg into $SD10_WORK/tools"
 	mkdir -p "$SD10_WORK/tools" "$HOME/.local/bin"
 	[ -d "$SD10_WORK/tools/mkbootimg" ] ||
