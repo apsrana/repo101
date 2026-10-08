@@ -112,6 +112,6 @@ same dtc warnings as the ThinkSmart View board), and the scripts pass
 - [Matthmusic/lineage16-lenovo-smartdisplay](https://github.com/Matthmusic/lineage16-lenovo-smartdisplay): hardware extraction (`extraction/HARDWARE_REPORT.md`), stock kernel config, and an EDL un-brick report for `blueberry`
 - [msm8953-mainline/linux](https://github.com/msm8953-mainline/linux): `arch/arm64/boot/dts/qcom/apq8053-lenovo-cd-18781y.dts`, the sibling board this port starts from
 - [msm8916-mainline/lk2nd](https://github.com/msm8916-mainline/lk2nd): `lk2nd/device/dts/msm8953/apq8053-lenovo-cd-18781y.dts`
-- [pmaports `device-qcom-msm8953`](https://gitlab.postmarketos.org/postmarketOS/pmaports/-/tree/master/device/community/device-qcom-msm8953)
+- [pmaports `device-qcom-msm8953`](https://gitlab.postmarketos.org/postmarketOS/pmaports/-/tree/main/device/community/device-qcom-msm8953)
 - [bkerler/edl](https://github.com/bkerler/edl)
 - [Tao of Mac: The Lenovo ThinkSmart View, Rebooted](https://taoofmac.com/space/blog/2023/04/22/1330) (EDL key combination on the sibling device)

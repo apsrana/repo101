@@ -15,7 +15,7 @@ need git make clang ld.lld mkbootimg
 
 src="$SD10_WORK/linux"
 dts_dir="$src/arch/arm64/boot/dts/qcom"
-cfg_url="https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/master/device/community/linux-postmarketos-qcom-msm8953/config-postmarketos-qcom-msm8953.aarch64"
+cfg_url="https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/main/device/community/linux-postmarketos-qcom-msm8953/config-postmarketos-qcom-msm8953.aarch64"
 
 fetch=0
 boot=1
